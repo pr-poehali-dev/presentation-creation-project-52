@@ -66,6 +66,21 @@ export default function Index() {
   const handleDownloadPptx = async () => {
     setGenerating(true);
     try {
+      const urlToBase64 = async (url: string): Promise<string> => {
+        try {
+          const res = await fetch(url, { mode: "cors" });
+          const blob = await res.blob();
+          return await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          return "";
+        }
+      };
+
       const pptx = new pptxgen();
       pptx.layout = "LAYOUT_WIDE";
       pptx.title = "Victory Park Residences — 4-комнатная квартира";
@@ -79,10 +94,14 @@ export default function Index() {
         "https://cdn.poehali.dev/projects/603ba905-8b0a-4a95-9eb7-081add793bbb/bucket/e618b959-05fc-4b46-a5c8-fdd4796ff45a.png",
       ];
 
+      const photosB64 = await Promise.all(ALL_PHOTOS.map(urlToBase64));
+      const heroB64 = photosB64[0];
+
       // Slide 1 — Title
       const s1 = pptx.addSlide();
       s1.background = { color: "1A1A1A" };
-      s1.addImage({ path: HERO, x: 0, y: 0, w: 13.33, h: 7.5, sizing: { type: "cover", w: 13.33, h: 7.5 } });
+      if (heroB64)
+        s1.addImage({ data: heroB64, x: 0, y: 0, w: 13.33, h: 7.5, sizing: { type: "cover", w: 13.33, h: 7.5 } });
       s1.addShape("rect", { x: 0, y: 0, w: 13.33, h: 7.5, fill: { color: "000000", transparency: 50 }, line: { color: "000000", width: 0 } });
       s1.addText("VICTORY PARK RESIDENCES", { x: 0.6, y: 0.5, w: 12, h: 0.4, fontSize: 12, color: "FFFFFF", fontFace: "Calibri", charSpacing: 6 });
       s1.addText("4-комнатная квартира", { x: 0.6, y: 4.5, w: 12, h: 1.2, fontSize: 54, color: "FFFFFF", fontFace: "Cambria" });
@@ -142,10 +161,11 @@ export default function Index() {
         "Мастер-спальня",
         "Ванная комната",
       ];
-      ALL_PHOTOS.forEach((url, i) => {
+      photosB64.forEach((data, i) => {
+        if (!data) return;
         const sp = pptx.addSlide();
         sp.background = { color: "1A1A1A" };
-        sp.addImage({ path: url, x: 0, y: 0, w: 13.33, h: 7.5, sizing: { type: "contain", w: 13.33, h: 7.5 } });
+        sp.addImage({ data, x: 0, y: 0, w: 13.33, h: 7.5, sizing: { type: "contain", w: 13.33, h: 7.5 } });
         sp.addText(photoTitles[i] || `Фото ${i + 1}`, {
           x: 0.6, y: 6.8, w: 12, h: 0.5, fontSize: 14, color: "FFFFFF", fontFace: "Calibri", charSpacing: 4,
         });
